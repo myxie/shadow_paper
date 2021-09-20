@@ -1,0 +1,7 @@
+workflow, site, nodes, cores, cpu (ghz), memory(gb), file system, ioprof, pprof, normal
+Montage, Amazon EC2, 1, 8, Xeon@2.33, 7.5, ext3, 1:11:20, 0:57:36, 0:55:28
+CyberShake, TACC Ranger, 36, 16, Opteron@2.3, 32, Lustre, 16:35:00, 12:20:00,N/A
+Broadband, Amazon EC2,1,8,Xeon@2.33, 7.5, ext3, 1:31:20, 1:21:16, 1:20:03
+Epigenome, Amazon EC2,1,8,Xeon@2.33, 7.5, ext3, 1:11:11, 1:08:01, 1:07:40
+LIGO, Syracuse SUGAR,80,4,Xeon@2.50, 7.5, NFS, 1:48:11, 1:47:38, 1:41:13
+SIPHT, UW Newbio, 13,8,Xeon@3.16, 7.5, ext3, 1:33:24, 1:19:37, 1:10:53

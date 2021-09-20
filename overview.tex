@@ -1,0 +1,401 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\include{packages}
+\usepackage{palatino}
+% \renewcommand{\familydefault}{\sfdefault}
+\begin{document}
+
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+\begin{multicols}{2}
+\section*{\textit{shadow} Framework}
+\label{sec:title}
+
+\subsection*{Introduction}
+\label{ssec:subtitle}
+There are a number of open-source frameworks designed for testing and benchmarking of algorithms, demonstrate typical implementations, and provide
+an infrastructure for the development and testing of new algorithms. Examples include NLOPT for non-linear optimisation in a number of languages (C/C++, Python, Java)~\cite{johnson}, NetworkX for graph and network implementations for Python, MOEA for Java~\cite{2020}, and DEAP for distributed EAs in Python~\cite{derainville2012}. Researchers benefit as a community from having open implementations of algorithms, as it improves reproducibility and accuracy of benchmarking and algorithmic analysis~\cite{crick2014}. 
+
+
+Science workflow scheduling is a field with varied contributions and algorithms that address a number of different sub-problems
+within workflow scheduling~\cite{wu2015a,zotero-661,benoit2013,herroelen1998,rodriguez2016,burkimsher}. However, implementations can be challenging to find; for example, implementations of~\cite{topcuoglu2002} can only be found in code that uses it - such as in simulation frameworks like WorkflowSim - or are not implemented in any public way at all - such as highly cited NSGAII* and PCP. These are also typically used as benchmarking or stepping stones for new algorithms; for example, HEFT continues to be used as the foundation for scheduling heuristics, meta-heuristics, and even mathematical optimisation procedures to this day~\cite{bridi2016}, despite being 20 years old. The lack of a consistent testing environment and implementation of algorithms means that it is hard to reproduce and verify the results of published material, especially when a common workflow model may not be applied. \textit{shadow} aims to address this issue by providing a workflow-oriented algorithm library and testing environment, in which the performance of single- and multi-objective workflow scheduling algorithms may be compared to implementations of de-facto algorithms, or to extend these existing algorithms.    
+
+It should be noted that existing work already addresses testing workflow scheduling algorithms in `real-world' environments; tools like GridSim - and the extension, CloudSim - are prevalent and well used in the literature. These are excellent resources for determining the effectiveness of the implementations for application-layer results; however, \textit{shadow} is focused on providing a standard repository of existing algorithms, and a template workflow model that can be used to ensure consistency across performance testing. To the best of our knowledge, there is no single-source repository of implementations for DAG or Workflow scheduling algorithms.  The emphasis in shadow is on reproducible and accuracy in algorithm performance analysis, rather than a simulated demonstration of the application of a particular algorithm in certain environments. 
+Additionally, with the popularity of Python in other domains that are also growing within the workflow community - such as Machine and Deep Learning - \textit{shadow} provides a frictionless opportunity to integrate with the frameworks and libraries commonly used in those research areas.
+
+
+\subsection*{Design and Core Architecture}
+\label{ssec:danda}
+
+\subsubsection*{Design}
+shadow follows a ‘workflow-oriented’ design approach. What this means is that workflows are at the centre of all decisions made within the framework; environments are assigned to workflows, algorithms operate on workflows, and the main object that is manipulated and interacted with when developing an algorithm is likely to be a workflow object. 
+
+By adopting a workflow-oriented model to developing algorithms to test, we achieved three important outcomes: 
+\begin{itemize}
+    \item Freedom of implementation for users wishing to develop their own algorithms. There is no prohibition of additional libraries or data-structures, provided the workflow structure is used within their algorithm.
+	\item Focus on the workflow and reproducibility; the same workflow model is used by all algorithms when benchmarking, which means that comparisons between differing approaches (e.g. a single-objective model such as HEFT vs. a dynamic implementation of a multi-objective heuristic model) must be applied to the same workflow. 
+	\item Examples (a la. DEAP paper): We have implemented a number of popular and well-documented algorithms that are commonly used to benchmark new algorithms and approaches. There is no need to follow the approaches taken by these implementations, but they provide a useful application 
+\end{itemize}
+By virtue of using the \texttt{NetworkX} graph library as the storage object for the workflow graph, users may extend the shadow workflow object in any way as they would a \texttt{NetworkX} object, with additional helpers designed explicitly for dealing with a workflow. 
+
+shadow is not intended to accurately simulated the execution of a workflow in an environment; for example, working with delays in processing, or node failure in a cluster. Strategies to mitigate these are often implemented secondary to the scheduling algorithms - especially in the case of static scheduling - and would not be a fair approach to benchmarking the relative performance between each application. Instead, it provides algorithms that may be used - statically or dynamically - in a way that may used within a larger simulation environment, where one would be able to compare the specific environmental performance of one algorithm over another. Integrating shadow into a larger simulation has been done by the authors of this paper, and the framework has been designed with the intention that this will continue to be a feature of the framework.
+
+
+\subsection*{Architecture}
+
+Shadow is split into three main components that are separated by their intended use case, whether it be designing new algorithms, or to benchmark against the existing implementations. These components are:
+
+	•	<models>
+	•	<algorithms>
+	•	<visualiser>
+
+\subsubsection*{Models}
+The <models> module is likely the main entry point for researchers or developers of algorithms; in it are a number of key components of the shadow library, the uses of which are demonstrated both in the <examples> directory, as well as the implemented sample algorithms in the <algorithms> module. The <algorithms> module is concerned with the implementations of algorithms mentioned previously; the intention is to provide both intended implementations of the shadow <models>, as well as benchmark implementations for those designing additions. The visualiser is a useful way to add graphical components to a benchmarking recipe, or can be invoked using the command line interface to quickly run one of the in-built algorithms. 
+
+These components are all contained within the main <shadow> directory; there are also additional codes that are located in utils, which will be covered in more detail in Section [Insert Section].
+Models
+
+<models> provides the <Workflow> class, the foundational data structure of shadow. Currently, a <Workflow> object is initialised using a JSON configuration file that represents the underlying DAG  structure of the workflow, along with storing different attributes for task-nodes and edges. These attributes are implicitly defined within the configuration file; for example, if the task graph has computate demand (as total number of FLOPs/task) but not memory demand (as average GB/task), then the Workflow object is initialised without memory, requiring no additional input from the developer. The following example is based on the original graph presented in the HEFT algorithm, and demonstrates the configuration file and how it is initialised: 
+
+\begin{verbatim}
+from shadow.models.workflow import Workflow
+HEFTWorkflow = Workflow('heft.json')
+\end{verbatim}
+The <heft.json> file contains the graph structure, based the JSON dump received when using networks. Nodes and their respective costs (computation, memory, monetary etc.) are stored with their IDs
+\begin{verbatim}
+    ...
+    "nodes": [
+        {
+            "comp": 119000,
+            "id": 0
+        },
+        {
+            "comp": 92000,
+            "id": 1
+        },
+        {
+            "comp": 95000,
+            "id": 2
+        },
+        ...
+    ],
+\end{verbatim}
+Edges in the graph - the precedence relationship between tasks -  are described by ‘links’, along with the related data-products:
+\begin{verbatim}
+    "links": [
+        {
+            "data_size": 18,
+            "source": 0,
+            "target": 1
+        },
+        {
+            "data_size": 12,
+            "source": 0,
+            "target": 2
+        },
+        ...
+\end{verbatim}
+
+
+NetworkX is used to form the base-graph structure for the workflow; it allows the user to specify nodes as Python objects, so tasks are stored using the shadow <Task> object structure. 
+
+In addition to the JSON configuration for the workflow DAG, a Workflow object also requires an <Environment> object. <Environment>s represent the compute platform on which the Workflow is executed; they are add to <Workflow> objects in the event that different environments are being analysed. The environment is also specified in JSON; currently, there is no defined way to specify an environment programmatically, although it is possible to do so if using JSON is not an option. 
+
+\begin{verbatim}
+
+  "system": {
+    "resources": {
+      "cat0_m0": {
+        "flops": 7000.0
+        "mem":
+        "io" : 
+      },
+      "cat1_m1": {
+        "flops": 6000.0
+      },
+      "cat2_m2": {
+        "flops": 11000.0
+      }
+    },
+    "rates": {
+      "cat0": 1.0, # GB/s
+      "cat1": 1.0,
+      "cat2": 1.0
+    }
+  }
+\end{verbatim}
+
+Environments are added to the \texttt{Workflow} object in the following manner: 
+
+\begin{lstlisting}[language=Python]
+from shadow.models.environment import Environment
+env = Environment('sys.json')
+HEFTWorkflow.add_environment(env)
+\end{lstlisting}
+
+It is also possible to use pre-calculated costs (i.e. completion time in seconds) when scheduling with shadow. This approach is less flexible for scheduling workflows, but is a common approach used in the scheduling algorithm literature. This can be achieved by adding a list of costs per tasks to the workflow specification JSON file, in addition to the following ‘header’:
+
+\begin{verbatim}
+{
+    "header" : {
+    "time": true
+    },
+    ...
+
+    "nodes": [
+    {
+        "comp": [
+            14,
+            16,
+            9
+        ],
+        "id": 0
+    },
+    ...
+}
+\end{verbatim}
+
+The <Machine> class is also defined in environment.py - this is a helper-class that makes developer access to specifications (provided compute, memory, bandwidth etc.) convenient and intuitive. The Workflow class will calculate the runtime and other values based on it’s current environment (this occurs when the environment is passed to the Workflow); however, users of the environment class may interact with these compute values if necessary. 
+
+
+
+Configuration files may be generated in a number of ways, following a variety of specifications, using the shadowgen utility (see ‘Additional tools’ section). 
+
+The final class that may be of interest to algorithm developers is the <Solution> class. For single-objective heuristics like HEFT or min-min, the final result is a single solution, which is a set of machine-task pairs. However, for population- and search-based metaheuristics, multiple solutions must be generated, and then evaluated, often for two or more (competing) objectives. These solutions also need to be sanity-checked in order to ensure that randomly generated task-machine pairs still follow the precedence constraints defined by the original workflow DAG. The <Solution> provides a basic object structure that stores machines and task pairs as a dictionary of <Allocations>; Allocations store the task, and it’s start and finish time on the machine. This provides an additional ease-of-use functionality for developers, who can interact with allocations using intuitive attributes (rather than navigating a dictionary of stored keywords). The <Solution> currently stores a single objective (makespan) but can be expanded to include other, algorithm-specific requirements. For example, NSGAII* ranks each generated solution using the non-dominated rank and crowding distance operator; as a result, the shadow implementation creates a class, <NSGASolution>, that inherits the basic <Solution> class and adds the these additional attributes. This reduces the complexity of the global solution class whilst providing the flexibility for designers to create more elaborate solutions (and algorithms). 
+
+\subsubsection*{Algorithms}
+These algorithms may be extended by others, or used when running comparisons
+and benchmarking. The <examples> directory gives you an overview of recipes
+that one can follow to use the algorithms to perform benchmarking. 
+
+The shadow approach to describing an algorithm presents the algorithm as a
+single entity (e.g. heft()), with an initialised workflow object passed as a
+function parameter. 
+
+
+\subsubsection*{Visualiser}
+The visualiser is a useful way to add graphical components to a benchmarking recipe, or can be invoked using the command line interface to quickly run one of the in-built algorithms. Shadow leverages \texttt{matplotlib} and \texttt{numpy} to produce graphics, and wraps certain styles of plots into easy-to-use classes that are structured around the Workflow class. 
+
+\subsection*{Additional tools}
+\subsubsection*{Command-line interface}
+\subsubsection*{\textit{shadowgen}}
+
+\textit{shadowgen} is a utility built into the \textit{shadow} framework to
+generate workflows that are reproducible and interrogable. It is built to
+generate a variety of workflows that have been documented and characterised in
+the literature in a way that augments current techniques, rather than
+replacing them entirely. 
+
+This includes the following: 
+
+\begin{itemize}
+	\item Python code that runs the GGen graph
+	generator\footnote{https://github.com/perarnau/ggen}, which produces graphs in a variety of shapes and sizes based on provided parameters. This was originally designed to produce task graphs to test the performance of DAG scheduling algorithms
+	\item DAX Translator: This takes the commonly used Directed Acyclic XML (DAX)
+	file format, used to generate graphs for Pegasus, and translates them into
+	the \textit{shadow} format. Future work will also interface with the
+	WorkflowGenerator code that is based on the work conducted
+	in~\cite{bharathi2008}, which generates DAX graphs. 
+	\item DALiuGE/EAGLE Translator: EAGLE logical graphs must be unrolled into
+	Physical Graph Templates (PGT) before they are in a DAG that can be scheduled in
+	\textit{shadow}. \textit{shadowgen} will run the DALiUGE unroll code, and then
+	convert this PGT into a \textit{shadow}-based JSON workflow. 
+\end{itemize}
+
+
+\subsection*{Existing approaches}
+\label{ssec:existing}
+A majority of work published in workflow scheduling will use workflows
+generated using the approach laid out in~\cite{bharathi2008}. The five
+workflows described in the paper (Montage, CyberShake, Epigenomics, SIPHT and
+LIGO) had their task runtimes, memory and I/O rates profiled, from which they
+created a WorkflowGenerator
+tool\footnote{https://github.com/pegasus-isi/WorkflowGenerator}. This tool
+uses the distribution sizes for runtime etc., without requiring any
+information on the hardware on which the workflows are being `scheduled'. This
+means that the characterisation is only accurate for that particular hardware,
+if those values are to be used across the board; testing on heterogeneous
+systems, for example, is not possible unless the values are to be changed.
+
+This is dealt with in varied ways across the literature. For
+example,~\cite{rodriguez2018} use the distributions
+from~\cite{bharathi2008} paper, and change the units from seconds to MIPS,
+rather than doing a conversion between the two. Others use the values taken
+from distribution and workflow generator, without explaining how their
+runtimes differ between resources~\cite{abrishami2013,malawski2015}; Malawski
+et al generate `20 different workflow instances...
+using parameters and task runtmime distributions from real workflow
+traces', but do not provide these parameters~\cite{malawski2015}.  Recent
+research from~\cite{wang2019} still uses the workflows identified in~\cite{bharathi2008,juve2013},
+but only the structure of the workflows is assessed, replacing the tasks from
+the original workflows with other, unrelated examples.
+
+\subsection*{Cost generation in \textit{shadowgen}} 
+The cost generatation method used by \textit{shadowgen} is a normalised-cost approach, in which the values
+calculated for the runtime, memory, and I/O for each tasks is derived from 
+the normalised size as profiled in~\cite{juve2013} and~\cite{bharathi2008}.
+This way, the costs per-workflow are indicative of the relative length and
+complexity of each task, and are more likely to transpose across different
+hardware configurations than using the varied approaches in the literature. 
+% \\
+\end{multicols}
+% \begin{table}[htb]
+%     \centering
+%     \caption{Experimental conditions for workflow profiling in~\cite{juve2013}}
+%     \resizebox{\columnwidth}{!}{%
+%     \begin{tabular}{@{\extracolsep{4pt}}cccccccccccc@{}}
+%         \toprule
+%         Workflow &  Site &  Nodes &  Cores &  Cpu (GHz) &  Memory(GB) &  File
+%         System &  ioprof &  pprof &  Normal \\
+%         \midrule
+%         Montage &  Amazon EC2 &  1 &  8 &  Xeon@2.33 &  7.5 &  ext3 &  1:11:20 &  0:57:36 &  0:55:28 \\
+%         CyberShake &  TACC Ranger &  36 &  16 &  Opteron@2.3 &  32 &  Lustre &  16:35:00 &  12:20:00 & N/A \\
+%         Broadband &  Amazon EC2 & 1 & 8 & Xeon@2.33 &  7.5 &  ext3 &  1:31:20 &  1:21:16 &  1:20:03 \\
+%         Epigenome &  Amazon EC2 & 1 & 8 & Xeon@2.33 &  7.5 &  ext3 &  1:11:11 &  1:08:01 &  1:07:40 \\
+%         LIGO &  Syracuse SUGAR & 80 & 4 & Xeon@2.50 &  7.5 &  NFS &  1:48:11 &  1:47:38 &  1:41:13 \\
+%         SIPHT &  UW Newbio &  13 & 8 & Xeon@3.16 &  7.5 &  ext3 &  1:33:24 &  1:19:37 &  1:10:53 \\
+%         \bottomrule
+%     \end{tabular}%
+%     }
+%     \label{tab:profile_environment}
+% \end{table}
+
+\begin{table}[htb]
+    \centering
+    \caption{Example profile of Montage workflow, as presented in~\cite{juve2013}}
+    \resizebox{\columnwidth}{!}{%
+    \begin{tabular}{@{\extracolsep{4pt}}cccccccccccc@{}}
+        \toprule
+        Job & Count & \multicolumn{2}{c}{Runtime}&  \multicolumn{2}{c}{
+        I/O Read} & \multicolumn{2}{c} {I/O Write} & \multicolumn{2}{c}{Peak Memory} &
+        \multicolumn{2}{c}{CPU Util}\\ \cmidrule{3-4} \cmidrule{5-6} \cmidrule{7-8} \cmidrule{9-10} \cmidrule{11-12}
+           & &  Mean (s) & Std. Dev. & Mean (MB) & Std. Dev. & Mean (MB)& Std. Dev. &
+           Mean (MB)& Std. Dev. & Mean (\%) & Std. Dev \\ 
+        \midrule
+        mProjectPP & 2102 & 1.73 & 0.09 & 2.05 & 0.07 & 8.09 & 0.31 & 11.81 & 0.32 & 86.96 & 0.03 \\
+        mDiffFit & 6172 & 0.66 & 0.56 & 16.56 & 0.53 & 0.64 & 0.46 & 5.76 & 0.67 & 28.39 & 0.16 \\
+        mConcatFit & 1 & 143.26 & 0.00 & 1.95 & 0.00 & 1.22 & 0.00 & 8.13 & 0.00 & 53.17 & 0.00 \\
+        mBgModel & 1 & 384.49 & 0.00 & 1.56 & 0.00 & 0.10 & 0.00 & 13.64 & 0.00 & 99.89 & 0.00 \\
+        mBackground & 2102 & 1.72 & 0.65 & 8.36 & 0.34 & 8.09 & 0.31 & 16.19 & 0.32 & 8.46 & 0.10 \\
+        mImgtbl & 17 & 2.78 & 1.37 & 1.55 & 0.38 & 0.12 & 0.03 & 8.06 & 0.34 & 3.48 & 0.03 \\
+        mAdd & 17 & 282.37 & 137.93 & 1102.57 & 302.84 & 775.45 & 196.44 & 16.04 & 1.75 & 8.48 & 0.11 \\
+        mShrink & 16 & 66.10 & 46.37 & 411.50 & 7.09 & 0.49 & 0.01 & 4.62 & 0.03 & 2.30 & 0.03 \\
+        mJPEG & 1 & 0.64 & 0.00 & 25.33 & 0.00 & 0.39 & 0.00 & 3.96 & 0.00 & 77.14 & 0.00 \\
+        \bottomrule
+    \end{tabular}%
+    }
+    \label{tab:montage_profile}
+\end{table}
+\begin{multicols}{2}
+The proposed distribution of values would be derived from a table of normalised values using a varation on min-max feature scaling for each
+mean/std. deviation column in Table~\ref{tab:montage_profile}. The formula
+used to calculated each tasks' normalised values is described in
+Equation~\ref{eq:normalise}; the results of applying this to
+Table~\ref{tab:montage_profile} is shown in Table~\ref{tab:norm_montage} 
+
+\begin{equation}
+\label{eq:normalise}
+	X^\prime = \frac{(X \times n_{task})-X_{min}}{X_{max}-X_{min}}
+\end{equation}
+
+\end{multicols}
+\begin{table}[htb]
+    \centering
+    \caption{Normalised values for columns derived from Profiled values Table~\ref{tab:montage_profile}}
+    \resizebox{\columnwidth}{!}{%
+    \begin{tabular}{@{\extracolsep{4pt}}cccccccccccc@{}}
+        \toprule
+        Job & \multicolumn{2}{c}{Runtime}&  \multicolumn{2}{c}{
+        I/O Read} & \multicolumn{2}{c} {I/O Write} & \multicolumn{2}{c}{Peak Memory} &
+        \multicolumn{2}{c}{CPU Util}\\ \cmidrule{2-3} \cmidrule{4-5} \cmidrule{6-7} \cmidrule{8-9} \cmidrule{10-11}
+           &  Mean (s) & Std. Dev. & Mean (MB) & Std. Dev. & Mean (MB)& Std. Dev. &
+           Mean (MB)& Std. Dev. & Mean (\%) & Std. Dev \\ 
+        \midrule
+        		mProjectPP & 9.47 & 0.49 & 11.22 & 0.38 & 44.30 & 1.70 & 64.66 & 1.75 & 476.20 & 0.16 \\
+		mDiffFit & 10.61 & 9.00 & 266.27 & 8.52 & 10.29 & 7.40 & 92.61 & 10.77 & 456.48 & 2.57 \\
+		mConcatFit & 0.37 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 0.00 & 0.13 & 0.00 \\
+		mBgModel & 1.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.03 & 0.00 & 0.25 & 0.00 \\
+		mBackground & 9.42 & 3.56 & 45.78 & 1.86 & 44.30 & 1.70 & 88.65 & 1.75 & 46.32 & 0.55 \\
+		mImgtbl & 0.12 & 0.06 & 0.06 & 0.02 & 0.01 & 0.00 & 0.35 & 0.02 & 0.15 & 0.00 \\
+		mAdd & 12.50 & 6.11 & 48.83 & 13.41 & 34.34 & 8.70 & 0.70 & 0.08 & 0.37 & 0.00 \\
+		mShrink & 2.75 & 1.93 & 17.15 & 0.30 & 0.02 & 0.00 & 0.18 & 0.00 & 0.09 & 0.00 \\
+		mJPEG & 0.00 & 0.00 & 0.06 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.19 & 0.00 \\
+        \bottomrule
+    \end{tabular}%
+    }
+    \label{tab:norm_montage}
+\end{table}
+\begin{multicols}{2}
+This approach would allow algorithm designers and testers to prescribe what units they are interested in (e.g. seconds, MIPS, or FLOP seconds for runtime, MB or GB for Memory etc.) whilst still retaining the relative costs of that task within the workflow. In the example of Table~\ref{tab:norm_montage}, it is clear that mAdd and mBackground are still the longest running and I/O intensive tasks, and so the units are less of a concern.
+
+\subsection*{Related Work}
+
+Simulation systems:
+\begin{itemize}
+	\item GridSim ~\cite{buyya2002}
+	\item SimGrid ~\cite{casanova}
+	\item CloudSim (successor to GridSim)~\cite{calheiros2011}
+	\item WorkflowSim (~\cite{chen2012a})
+	\item Batsim (batch scheduling) ~\cite{dutot2017}
+\end{itemize}
+
+Kwok and Ahmed have discussed ways of benchmarking algorithms;
+additionally,~\cite{maurya2018} present a discussion on what a potential
+framework for scheduling algorithms would look like. 
+\begin{itemize}
+	\item Environment provider
+	\item DAG generator
+	\item Scheduler
+	\item Analyzer
+\end{itemize}
+\textit{shadow} also provides a visualization interface
+
+Current implementations of workflow scheduling algorithms may be found in a
+number of different environments. 
+\begin{itemize}
+	\item HEFT and Dynamic-HEFT implementations exist in WorkflowSim
+	\item DAG Man implements HEFT in its scheduling environment
+	\item DASK uses HEFT
+\end{itemize}
+
+There are also a number of implementations that are present on open-source
+repositories such as Git Hub, but these are not always official releases from papers. 
+
+% \end{multicols}
+\subsection*{Future work}
+Moving forward, heuristics and metaheuristics will continue to be added to the shadow algorithms module to facilitate broader benchmarking and to provide a `living' repository of workflow scheduling algorithms. Further investigation into workflow visualisation techniques will also be conducted. There are plans to develop a tool that uses the specifications in
+hpconfig~\footnote{github.com/myxie/hpconfig}, which are class-based
+descriptions of different hardware (e.g. \texttt{class XeonPhi} ) and High Performance Computing
+facilities (e.g \texttt{class PawseyGalaxy}). The idea behind hpconfig is
+the classes can be used to quickly `unwrap' into a large cluster or system,
+without having large JSON files in the repository or on disk; they also help
+with readability, as the specification data is represented clearly as class
+attributes.  
+\bibliographystyle{ieeetr}
+\bibliography{papers}
+\end{multicols}
+\end{document}
